@@ -9,6 +9,7 @@ import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.tcl.tclaicodebackend.constant.AppConstant;
 import com.tcl.tclaicodebackend.core.AiCodeGeneratorFacade;
+import com.tcl.tclaicodebackend.core.handler.StreamHandlerExecutor;
 import com.tcl.tclaicodebackend.exception.BusinessException;
 import com.tcl.tclaicodebackend.exception.ErrorCode;
 import com.tcl.tclaicodebackend.exception.ThrowUtils;
@@ -54,6 +55,9 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
 
     @Resource
     private ChatHistoryService chatHistoryService;
+
+    @Resource
+    private StreamHandlerExecutor streamHandlerExecutor;
 
     @Override
     public AppVO getAppVO(App app) {
@@ -141,19 +145,7 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         // 6. 调用AI代码生成
         Flux<String> stringFlux = aiCodeGeneratorFacade.generateAndSaveCodeStream(message, codeGenTypeEnum, appId);
         // 7.收集AI响应内容
-        StringBuilder aiResponseBuilder = new StringBuilder();
-        return stringFlux.map(chunk -> {
-            aiResponseBuilder.append(chunk);
-            return chunk;
-        }).doOnComplete(() -> {
-            String aiResponse = aiResponseBuilder.toString();
-            if (StrUtil.isNotBlank(aiResponse)) {
-                chatHistoryService.addChatMessage(appId, aiResponse, ChatHistoryMessageTypeEnum.AI.getValue(), loginUser.getId());
-            }
-        }).doOnError(error -> {
-            String errorMessage = "AI生成代码时发生错误: " + error.getMessage();
-            chatHistoryService.addChatMessage(appId, errorMessage, ChatHistoryMessageTypeEnum.AI.getValue(), loginUser.getId());
-        });
+        return streamHandlerExecutor.doExecute(stringFlux, chatHistoryService, appId, loginUser, codeGenTypeEnum);
     }
 
     @Override

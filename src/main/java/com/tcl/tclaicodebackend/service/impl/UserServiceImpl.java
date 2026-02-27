@@ -15,6 +15,7 @@ import com.tcl.tclaicodebackend.model.vo.LoginUserVO;
 import com.tcl.tclaicodebackend.model.vo.UserVO;
 import com.tcl.tclaicodebackend.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 
@@ -135,14 +136,25 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>  implements U
 
     @Override
     public boolean userLogout(HttpServletRequest request) {
-        // 先判断是否已登录
-        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
+        // 1. 关键：用 getSession(false)，只获取已存在的 Session，不存在则返回 null
+        HttpSession session = request.getSession(false);
+        if (session == null) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "未登录");
+        }
+
+        // 2. 先判断是否有登录态（避免空指针）
+        Object userObj = session.getAttribute(USER_LOGIN_STATE);
         if (userObj == null) {
             throw new BusinessException(ErrorCode.OPERATION_ERROR, "未登录");
         }
-        // 移除登录态
-        request.getSession().removeAttribute(USER_LOGIN_STATE);
-        return true;
+
+        try {
+            // 3. 销毁整个 Session，Spring Session 会自动删除 Redis 中的对应数据
+            session.invalidate();
+            return true;
+        } catch (Exception e) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "注销失败：" + e.getMessage());
+        }
     }
 
 

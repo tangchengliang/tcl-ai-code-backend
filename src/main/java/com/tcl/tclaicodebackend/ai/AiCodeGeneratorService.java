@@ -2,7 +2,9 @@ package com.tcl.tclaicodebackend.ai;
 
 import com.tcl.tclaicodebackend.ai.model.HtmlCodeResult;
 import com.tcl.tclaicodebackend.ai.model.MultiFileCodeResult;
+import dev.langchain4j.service.MemoryId;
 import dev.langchain4j.service.SystemMessage;
+import dev.langchain4j.service.UserMessage;
 import reactor.core.publisher.Flux;
 
 

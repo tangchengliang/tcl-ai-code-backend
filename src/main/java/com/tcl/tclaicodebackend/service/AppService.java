@@ -2,6 +2,7 @@ package com.tcl.tclaicodebackend.service;
 
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.core.service.IService;
+import com.tcl.tclaicodebackend.model.dto.app.AppAddRequest;
 import com.tcl.tclaicodebackend.model.dto.app.AppQueryRequest;
 import com.tcl.tclaicodebackend.model.entity.App;
 import com.tcl.tclaicodebackend.model.entity.User;
@@ -28,4 +29,6 @@ public interface AppService extends IService<App> {
     String deployApp(Long appId, User loginUser);
 
     void generateAppScreenshotAsync(Long appId, String appUrl);
+
+    Long createApp(AppAddRequest appAddRequest, User loginUser);
 }

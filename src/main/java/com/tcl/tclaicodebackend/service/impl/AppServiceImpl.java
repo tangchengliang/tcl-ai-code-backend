@@ -24,6 +24,7 @@ import com.tcl.tclaicodebackend.model.vo.AppVO;
 import com.tcl.tclaicodebackend.model.vo.UserVO;
 import com.tcl.tclaicodebackend.service.AppService;
 import com.tcl.tclaicodebackend.service.ChatHistoryService;
+import com.tcl.tclaicodebackend.service.ScreenshotService;
 import com.tcl.tclaicodebackend.service.UserService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -62,6 +63,9 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
 
     @Resource
     private VueProjectBuilder vueProjectBuilder;
+
+    @Resource
+    private ScreenshotService screenshotService;
 
     @Override
     public AppVO getAppVO(App app) {
@@ -207,7 +211,9 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         boolean updateResult = this.updateById(updateApp);
         ThrowUtils.throwIf(!updateResult, ErrorCode.OPERATION_ERROR, "更新应用部署信息失败");
         // 10. 返回可访问的 URL
-        return String.format("%s/%s/", AppConstant.CODE_DEPLOY_HOST, deployKey);
+        String deployUrl =  String.format("%s/%s/", AppConstant.CODE_DEPLOY_HOST, deployKey);
+        generateAppScreenshotAsync(appId, deployUrl);
+        return deployUrl;
     }
 
     /**
@@ -236,6 +242,28 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         // 删除应用
         return super.removeById(id);
     }
+
+    /**
+     * 异步生成应用截图并更新封面
+     *
+     * @param appId  应用ID
+     * @param appUrl 应用访问URL
+     */
+    @Override
+    public void generateAppScreenshotAsync(Long appId, String appUrl) {
+        // 使用虚拟线程异步执行
+        Thread.startVirtualThread(() -> {
+            // 调用截图服务生成截图并上传
+            String screenshotUrl = screenshotService.generateAndUploadScreenshot(appUrl);
+            // 更新应用封面字段
+            App updateApp = new App();
+            updateApp.setId(appId);
+            updateApp.setCover(screenshotUrl);
+            boolean updated = this.updateById(updateApp);
+            ThrowUtils.throwIf(!updated, ErrorCode.OPERATION_ERROR, "更新应用封面字段失败");
+        });
+    }
+
 
 
 }

@@ -1,6 +1,9 @@
 package com.tcl.tclaicodebackend.langgraph4j;
 
 import com.tcl.tclaicodebackend.langgraph4j.state.WorkflowContext;
+import org.bsc.langgraph4j.CompiledGraph;
+import org.bsc.langgraph4j.GraphRepresentation;
+import org.bsc.langgraph4j.prebuilt.MessagesState;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -42,5 +45,12 @@ class CodeGenWorkflowTest {
         System.out.println("生成类型: " + result.getGenerationType());
         System.out.println("生成的代码目录: " + result.getGeneratedCodeDir());
         System.out.println("构建结果目录: " + result.getBuildResultDir());
+    }
+
+    @Test
+    void testWorkflowCreate() {
+        CompiledGraph<MessagesState<String>> workflow = new CodeGenWorkflow().createWorkflow();
+        GraphRepresentation graph = workflow.getGraph(GraphRepresentation.Type.MERMAID);
+        System.out.println("工作流图:\n" + graph.content());
     }
 }

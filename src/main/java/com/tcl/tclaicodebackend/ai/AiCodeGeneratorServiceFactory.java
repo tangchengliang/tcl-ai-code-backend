@@ -2,6 +2,7 @@ package com.tcl.tclaicodebackend.ai;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.tcl.tclaicodebackend.ai.guardrail.PromptSafetyInputGuardrail;
 import com.tcl.tclaicodebackend.ai.tools.*;
 import com.tcl.tclaicodebackend.exception.BusinessException;
 import com.tcl.tclaicodebackend.exception.ErrorCode;
@@ -94,6 +95,7 @@ public class AiCodeGeneratorServiceFactory {
                         .streamingChatModel(reasoningStreamingChatModel)
                         .chatMemoryProvider(memoryId -> chatMemory)
                         .tools(toolManager.getAllTools())
+                        .inputGuardrails(new PromptSafetyInputGuardrail())
                         .hallucinatedToolNameStrategy(toolExecutionRequest -> ToolExecutionResultMessage.from(
                                 toolExecutionRequest, "Error: there is no tool called " + toolExecutionRequest.name()
                         ))
@@ -106,6 +108,7 @@ public class AiCodeGeneratorServiceFactory {
                         .chatModel(chatModel)
                         .streamingChatModel(openAiStreamingChatModel)
                         .chatMemory(chatMemory)
+                        .inputGuardrails(new PromptSafetyInputGuardrail())
                         .build();
             }
             default -> throw new BusinessException(ErrorCode.SYSTEM_ERROR,

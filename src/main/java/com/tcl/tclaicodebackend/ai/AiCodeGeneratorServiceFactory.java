@@ -98,6 +98,7 @@ public class AiCodeGeneratorServiceFactory {
                         .tools(toolManager.getAllTools())
                         .inputGuardrails(new PromptSafetyInputGuardrail())
 //                        .outputGuardrails(new RetryOutputGuardrail())
+                        .maxSequentialToolsInvocations(20) // 最多调用20次工具
                         .hallucinatedToolNameStrategy(toolExecutionRequest -> ToolExecutionResultMessage.from(
                                 toolExecutionRequest, "Error: there is no tool called " + toolExecutionRequest.name()
                         ))

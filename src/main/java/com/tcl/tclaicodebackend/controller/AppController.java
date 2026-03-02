@@ -19,6 +19,8 @@ import com.tcl.tclaicodebackend.model.entity.App;
 import com.tcl.tclaicodebackend.model.entity.User;
 import com.tcl.tclaicodebackend.model.enums.CodeGenTypeEnum;
 import com.tcl.tclaicodebackend.model.vo.AppVO;
+import com.tcl.tclaicodebackend.ratelimiter.annotation.RateLimit;
+import com.tcl.tclaicodebackend.ratelimiter.enums.RateLimitType;
 import com.tcl.tclaicodebackend.service.AppService;
 import com.tcl.tclaicodebackend.service.ProjectDownloadService;
 import com.tcl.tclaicodebackend.service.UserService;
@@ -291,6 +293,8 @@ public class AppController {
      * @return 生成结果流
      */
     @GetMapping(value = "/chat/gen/code", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @RateLimit(key = "chat_gen_code", rate = 2, rateInterval = 60,
+            limitType = RateLimitType.USER, message = "AI 对话请求频率过高，请稍后再试")
     public Flux<ServerSentEvent<String>> chatToGenCode(@RequestParam Long appId,
                                                        @RequestParam String message,
                                                        HttpServletRequest request) {

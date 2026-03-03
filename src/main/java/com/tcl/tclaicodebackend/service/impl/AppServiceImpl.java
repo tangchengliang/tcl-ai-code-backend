@@ -25,6 +25,8 @@ import com.tcl.tclaicodebackend.model.enums.ChatHistoryMessageTypeEnum;
 import com.tcl.tclaicodebackend.model.enums.CodeGenTypeEnum;
 import com.tcl.tclaicodebackend.model.vo.AppVO;
 import com.tcl.tclaicodebackend.model.vo.UserVO;
+import com.tcl.tclaicodebackend.monitor.MonitorContext;
+import com.tcl.tclaicodebackend.monitor.MonitorContextHolder;
 import com.tcl.tclaicodebackend.service.AppService;
 import com.tcl.tclaicodebackend.service.ChatHistoryService;
 import com.tcl.tclaicodebackend.service.ScreenshotService;
@@ -154,12 +156,28 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         if (codeGenTypeEnum == null) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "不支持的代码生成类型");
         }
-        // 5. 通过校验后，将用户消息添加到对话历史
+
+        // 5. 通过校验后，添加用户消息到对话历史
         chatHistoryService.addChatMessage(appId, message, ChatHistoryMessageTypeEnum.USER.getValue(), loginUser.getId());
-        // 6. 调用AI代码生成
-        Flux<String> stringFlux = aiCodeGeneratorFacade.generateAndSaveCodeStream(message, codeGenTypeEnum, appId);
-        // 7.收集AI响应内容
-        return streamHandlerExecutor.doExecute(stringFlux, chatHistoryService, appId, loginUser, codeGenTypeEnum);
+
+        // 6. 设置监控上下文
+        MonitorContextHolder.setContext(
+                MonitorContext.builder()
+                        .userId(loginUser.getId().toString())
+                        .appId(appId.toString())
+                        .build()
+        );
+
+        // 7. 调用 AI 生成代码（流式）
+        Flux<String> codeStream = aiCodeGeneratorFacade.generateAndSaveCodeStream(message, codeGenTypeEnum, appId);
+
+        // 8. 收集 AI 响应内容并在完成后记录到对话历史
+        return streamHandlerExecutor.doExecute(codeStream, chatHistoryService, appId, loginUser, codeGenTypeEnum)
+                .doFinally(signalType -> {
+                    // 流结束时清理（无论成功/失败/取消）
+                    MonitorContextHolder.clearContext();
+                });
+
     }
 
     @Override
@@ -217,7 +235,7 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         boolean updateResult = this.updateById(updateApp);
         ThrowUtils.throwIf(!updateResult, ErrorCode.OPERATION_ERROR, "更新应用部署信息失败");
         // 10. 返回可访问的 URL
-        String deployUrl =  String.format("%s/%s/", AppConstant.CODE_DEPLOY_HOST, deployKey);
+        String deployUrl = String.format("%s/%s/", AppConstant.CODE_DEPLOY_HOST, deployKey);
         generateAppScreenshotAsync(appId, deployUrl);
         return deployUrl;
     }
@@ -291,8 +309,6 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         log.info("应用创建成功，ID: {}, 类型: {}", app.getId(), selectedCodeGenType.getValue());
         return app.getId();
     }
-
-
 
 
 }

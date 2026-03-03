@@ -16,6 +16,7 @@ import com.tcl.tclaicodebackend.core.handler.StreamHandlerExecutor;
 import com.tcl.tclaicodebackend.exception.BusinessException;
 import com.tcl.tclaicodebackend.exception.ErrorCode;
 import com.tcl.tclaicodebackend.exception.ThrowUtils;
+import com.tcl.tclaicodebackend.innerService.InnerScreenshotService;
 import com.tcl.tclaicodebackend.mapper.AppMapper;
 import com.tcl.tclaicodebackend.innerService.InnerUserService;
 import com.tcl.tclaicodebackend.model.dto.app.AppAddRequest;
@@ -30,6 +31,7 @@ import com.tcl.tclaicodebackend.service.AppService;
 import com.tcl.tclaicodebackend.service.ChatHistoryService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.dubbo.config.annotation.DubboReference;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -52,9 +54,11 @@ import java.util.stream.Collectors;
 @Slf4j
 public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppService {
 
-    @Resource
-    @Lazy
+    @DubboReference
     private InnerUserService userService;
+
+    @DubboReference
+    private InnerScreenshotService screenshotService;
 
     @Resource
     private AiCodeGeneratorFacade aiCodeGeneratorFacade;
@@ -67,9 +71,6 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
 
     @Resource
     private VueProjectBuilder vueProjectBuilder;
-
-//    @Resource
-//    private ScreenshotService screenshotService;
 
     @Resource
     private AiCodeGenTypeRoutingServiceFactory aiCodeGenTypeRoutingServiceFactory;
@@ -277,11 +278,11 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         // 使用虚拟线程异步执行
         Thread.startVirtualThread(() -> {
             // 调用截图服务生成截图并上传
-//            String screenshotUrl = screenshotService.generateAndUploadScreenshot(appUrl);
+            String screenshotUrl = screenshotService.generateAndUploadScreenshot(appUrl);
             // 更新应用封面字段
             App updateApp = new App();
             updateApp.setId(appId);
-//            updateApp.setCover(screenshotUrl);
+            updateApp.setCover(screenshotUrl);
             boolean updated = this.updateById(updateApp);
             ThrowUtils.throwIf(!updated, ErrorCode.OPERATION_ERROR, "更新应用封面字段失败");
         });

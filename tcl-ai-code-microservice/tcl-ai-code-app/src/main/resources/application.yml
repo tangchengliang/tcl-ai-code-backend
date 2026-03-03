@@ -1,6 +1,8 @@
 spring:
   application:
     name: tcl-ai-code-app
+  profiles:
+    active: local
   # session
   session:
     store-type: redis
